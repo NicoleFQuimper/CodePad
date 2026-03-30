@@ -9,13 +9,13 @@ RUN apt-get update && apt-get install -y curl && \
 
 # Install Python data science packages
 RUN pip install --no-cache-dir \
-    numpy==1.26.4 \
-    pandas==2.2.1 \
-    scikit-learn==1.4.1 \
-    matplotlib==3.8.3 \
-    seaborn==0.13.2 \
-    scipy==1.12.0 \
-    statsmodels==0.14.1
+    numpy \
+    pandas \
+    scikit-learn \
+    matplotlib \
+    seaborn \
+    scipy \
+    statsmodels
 
 WORKDIR /app
 COPY package.json .
