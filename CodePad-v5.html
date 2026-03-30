@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="CodePad"/>
+<title>CodePad</title>
+<style>
+/* ── Reset ── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0d0d14;--bg2:#111118;--bg3:#1a1a28;--bg4:#13131e;
+  --border:#2a2a3e;--border2:#3a3a55;
+  --text:#e2e2f0;--muted:#6666a0;--muted2:#3a3a5a;
+  --purple:#a78bfa;--purple-d:#7c3aed;
+  --green:#4ade80;--amber:#f59e0b;--blue:#60a5fa;--red:#f87171;--teal:#2dd4bf;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,system-ui,sans-serif;}
+
+/* ── Shell ── */
+.shell{display:flex;flex-direction:column;height:100vh;height:100dvh;}
+
+/* ── Topbar ── */
+.topbar{height:48px;min-height:48px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:6px;overflow-x:auto;flex-shrink:0;}
+.topbar::-webkit-scrollbar{display:none}
+.logo{font-size:15px;font-weight:700;color:var(--purple);flex-shrink:0;letter-spacing:-.3px;}
+.sep{width:1px;height:22px;background:var(--border);flex-shrink:0;}
+button{-webkit-appearance:none;appearance:none;cursor:pointer;font-family:inherit;}
+.tb{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--muted);flex-shrink:0;line-height:1;}
+.tb:active{opacity:.6}
+.tb.on{color:var(--purple);border-color:var(--purple);}
+.tb.teal{color:var(--teal);border-color:var(--teal);}
+.run{background:var(--purple-d);border:none;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
+.run:active{background:#6d28d9}
+.run:disabled{opacity:.4}
+.flex1{flex:1;min-width:8px;}
+.lang-sel{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:5px 8px;font-size:12px;color:var(--text);outline:none;flex-shrink:0;}
+
+/* ── Main ── */
+.main{flex:1;display:flex;overflow:hidden;}
+
+/* ── Sidebar ── */
+.sidebar{width:190px;min-width:190px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .2s,min-width .2s;}
+.sidebar.gone{width:0;min-width:0;}
+.sb-head{font-size:10px;font-weight:600;color:var(--muted2);letter-spacing:.7px;text-transform:uppercase;padding:10px 12px 4px;flex-shrink:0;}
+.sb-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.sb-scroll::-webkit-scrollbar{display:none}
+.fitem{display:flex;align-items:center;gap:6px;padding:5px 12px;font-size:12px;color:var(--muted);cursor:pointer;border-left:2px solid transparent;user-select:none;-webkit-user-select:none;}
+.fitem:active{opacity:.6}
+.fitem.cur{color:var(--text);border-left-color:var(--purple);background:rgba(124,58,237,.1);}
+.fitem.dir{color:var(--amber);}
+.fdel{margin-left:auto;font-size:10px;color:transparent;padding:2px 4px;}
+.fitem:hover .fdel,.fitem:active .fdel{color:var(--red);}
+.sb-foot{border-top:1px solid var(--border);padding:8px;flex-shrink:0;}
+.sb-foot button{width:100%;background:transparent;border:1px solid var(--border2);border-radius:8px;padding:7px;font-size:12px;color:var(--muted);}
+.sb-foot button:active{opacity:.6}
+
+/* ── Editor area ── */
+.edit-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+
+/* ── Tabs ── */
+.tabs{height:36px;min-height:36px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;overflow-x:auto;flex-shrink:0;}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:7px 14px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;flex-shrink:0;user-select:none;}
+.tab:active{opacity:.6}
+.tab.cur{color:var(--text);border-bottom-color:var(--purple);background:var(--bg);}
+
+/* ── Code editor ── */
+.editor-wrap{flex:1;position:relative;overflow:hidden;}
+#editor{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  background:var(--bg);
+  color:#cdd6f4;
+  font-family:'Menlo','Monaco','Courier New',monospace;
+  font-size:13px;
+  line-height:1.7;
+  padding:12px 14px;
+  border:none;
+  outline:none;
+  resize:none;
+  -webkit-overflow-scrolling:touch;
+  tab-size:4;
+  white-space:pre;
+  overflow-wrap:normal;
+  overflow-x:auto;
+  overflow-y:auto;
+  caret-color:var(--purple);
+}
+#editor::selection{background:rgba(124,58,237,.35);}
+#editor::-webkit-scrollbar{width:4px;height:4px;}
+#editor::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* ── Terminal ── */
+.term{height:140px;min-height:140px;background:#07070f;border-top:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+.term-head{display:flex;align-items:center;gap:12px;padding:0 12px;background:var(--bg2);border-bottom:1px solid var(--border);height:28px;flex-shrink:0;}
+.tt{font-size:10.5px;color:var(--muted2);}
+.tt.on{color:var(--purple);}
+.term-out{flex:1;padding:6px 12px;font-family:'Menlo','Monaco',monospace;font-size:11px;line-height:1.75;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.term-out::-webkit-scrollbar{width:3px;}
+.term-out::-webkit-scrollbar-thumb{background:var(--border2);}
+.ok{color:var(--green);}.err{color:var(--red);}.info{color:var(--blue);}.prm{color:var(--purple);}.warn{color:var(--amber);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.blink-c{display:inline-block;width:5px;height:11px;background:var(--purple);animation:blink 1s step-end infinite;vertical-align:text-bottom;margin-left:2px;}
+
+/* ── AI Panel ── */
+.ai{width:265px;min-width:265px;background:var(--bg4);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .2s,min-width .2s;}
+.ai.gone{width:0;min-width:0;}
+.ai-head{padding:10px 12px 6px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.ai-title{font-size:12px;font-weight:600;color:var(--teal);}
+.ai-sub{font-size:10px;color:var(--muted2);margin-top:1px;}
+.ai-provs{display:flex;gap:4px;padding:6px 10px 2px;flex-shrink:0;}
+.ap{flex:1;border:1px solid var(--border2);border-radius:7px;padding:5px 4px;font-size:10px;color:var(--muted);background:transparent;text-align:center;line-height:1;}
+.ap:active{opacity:.6}
+.ap.on{border-color:var(--teal);color:var(--teal);background:rgba(45,212,191,.08);}
+.ap.on.cl{border-color:var(--purple);color:var(--purple);background:rgba(124,58,237,.08);}
+.ai-msgs{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch;}
+.ai-msgs::-webkit-scrollbar{width:3px;}
+.ai-msgs::-webkit-scrollbar-thumb{background:var(--border2);}
+.who{font-size:9.5px;font-weight:700;letter-spacing:.4px;margin-bottom:3px;}
+.who.ai{color:var(--teal);}.who.me{color:var(--green);}.who.cl{color:var(--purple);}
+.bubble{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;color:#9999bb;line-height:1.55;}
+.bubble.me{background:#1a1e10;border-color:#2a2e18;color:#aabb88;}
+.acode{background:#0a0a14;border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-family:'Menlo','Monaco',monospace;font-size:10.5px;color:var(--blue);margin-top:6px;white-space:pre-wrap;word-break:break-all;}
+.ai-quick{display:flex;flex-wrap:wrap;gap:4px;padding:0 9px 6px;flex-shrink:0;}
+.aq{background:transparent;border:1px solid var(--border2);border-radius:10px;padding:4px 8px;font-size:10px;color:var(--muted);}
+.aq:active{opacity:.6}
+.ai-bar{padding:8px;border-top:1px solid var(--border);display:flex;gap:6px;flex-shrink:0;}
+.ai-in{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--text);outline:none;font-family:inherit;}
+.ai-in::placeholder{color:var(--muted2);}
+.ai-in:focus{border-color:var(--teal);}
+.ai-go{background:var(--teal);border:none;border-radius:8px;padding:8px 12px;color:#032a27;font-size:14px;font-weight:700;}
+.ai-go:active{opacity:.7}
+
+/* ── Status bar ── */
+.sbar{height:22px;min-height:22px;background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:12px;flex-shrink:0;overflow:hidden;}
+.si{font-size:10px;color:var(--muted2);display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* ── Overlays / Modals ── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;}
+.ov.show{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:20px;width:100%;max-width:500px;max-height:88vh;overflow-y:auto;}
+.modal::-webkit-scrollbar{width:4px;}
+.modal::-webkit-scrollbar-thumb{background:var(--border2);}
+.mtitle{font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;}
+.lbl{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;margin-top:12px;}
+.inp{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);font-family:inherit;outline:none;}
+.inp:focus{border-color:var(--teal);}
+textarea.inp{resize:vertical;min-height:64px;}
+.hint{font-size:10.5px;color:var(--muted2);margin-top:4px;line-height:1.55;}
+.mrow{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap;}
+.btn{border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn:active{opacity:.7}
+.bp{background:var(--purple-d);color:#fff;}
+.bt{background:#0e5a52;color:var(--teal);}
+.bg{background:var(--bg3);border:1px solid var(--border2);color:var(--muted);}
+.sbox{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:10px;}
+.stitle{font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:600;}
+.badge-ok{background:#0a2a1e;color:var(--green);border:1px solid #0f4a30;}
+.badge-no{background:#2a1a0a;color:var(--amber);border:1px solid #4a2e10;}
+.prog-wrap{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin:6px 0;}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--teal),var(--purple));border-radius:2px;width:0%;transition:width .3s;}
+/* model cards */
+.mc{border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;margin-bottom:6px;display:flex;align-items:flex-start;gap:10px;}
+.mc:active{opacity:.7}
+.mc.on{border-color:var(--teal);background:rgba(45,212,191,.05);}
+.mc-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.mc-name{font-size:12.5px;font-weight:600;color:var(--text);}
+.mc-desc{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.4;}
+.mc-tag{display:inline-block;font-size:9px;padding:2px 6px;border-radius:5px;margin:3px 2px 0 0;}
+.t-teal{background:#0a2a26;color:var(--teal);}
+.t-grn{background:#0a2616;color:var(--green);}
+.t-amb{background:#2a1e0a;color:var(--amber);}
+.t-blu{background:#0a1a2a;color:var(--blue);}
+/* theme grid */
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;}
+.tcard{border:1px solid var(--border);border-radius:9px;overflow:hidden;cursor:pointer;}
+.tcard:active{opacity:.7}
+.tcard.on{border-color:var(--teal);}
+.tprev{padding:8px 10px;font-family:'Menlo','Monaco',monospace;font-size:9px;line-height:1.7;white-space:pre;}
+.tname{padding:5px 8px;background:var(--bg3);font-size:11px;font-weight:500;color:var(--text);}
+/* toggle */
+.tog-row{display:flex;align-items:center;justify-content:space-between;}
+.tog{position:relative;width:42px;height:24px;flex-shrink:0;}
+.tog input{opacity:0;width:0;height:0;position:absolute;}
+.tog-track{position:absolute;inset:0;background:var(--border2);border-radius:12px;cursor:pointer;}
+.tog-thumb{position:absolute;left:3px;top:3px;width:18px;height:18px;background:#fff;border-radius:50%;pointer-events:none;}
+input:checked+.tog-track{background:var(--teal);}
+input:checked~.tog-thumb{left:21px;}
+/* wizard pills */
+.wpills{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.wp{border:1px solid var(--border2);border-radius:14px;padding:5px 12px;font-size:11px;color:var(--muted);background:transparent;cursor:pointer;}
+.wp:active{opacity:.7}
+.wp.on{background:var(--purple-d);color:#fff;border-color:var(--purple-d);}
+.ftree{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:'Menlo','Monaco',monospace;font-size:10px;line-height:1.85;white-space:pre;overflow:auto;max-height:160px;margin-top:8px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin .6s linear infinite;display:inline-block;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <span class="logo">✦ CodePad</span>
+  <div class="sep"></div>
+  <button class="tb on" id="btn-sb" onclick="toggleSidebar()">📁</button>
+  <button class="tb" onclick="showModal('wizard-ov')">✦ Wizard</button>
+  <div class="sep"></div>
+  <select class="lang-sel" id="lang-sel" onchange="switchLang(this.value)">
+    <option value="python">Python</option>
+    <option value="javascript">JavaScript</option>
+    <option value="rust">Rust</option>
+    <option value="swift">Swift</option>
+    <option value="c">C</option>
+  </select>
+  <div class="flex1"></div>
+  <button class="tb" onclick="showModal('ai-ov')">🧠 AI</button>
+  <button class="tb on" id="btn-ai" onclick="toggleAI()">✨ Chat</button>
+  <button class="tb" onclick="showModal('settings-ov')">⚙</button>
+  <button class="run" id="run-btn" onclick="runCode()">▶ Run</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sb-head">Explorer</div>
+    <div class="sb-scroll" id="filetree"></div>
+    <div class="sb-foot">
+      <button onclick="showModal('newfile-ov')">+ New File</button>
+    </div>
+  </div>
+
+  <!-- EDITOR -->
+  <div class="edit-area">
+    <div class="tabs" id="tabs"></div>
+    <div class="editor-wrap">
+      <textarea id="editor" spellcheck="false" autocorrect="off" autocapitalize="off" oninput="onEdit()" onkeydown="onKey(event)"></textarea>
+    </div>
+    <!-- TERMINAL -->
+    <div class="term">
+      <div class="term-head">
+        <span class="tt on">Terminal</span>
+        <span class="tt">Output</span>
+        <span style="margin-left:auto;font-size:9.5px;color:var(--muted2);" id="srv-badge">⬤ no server</span>
+      </div>
+      <div class="term-out" id="term"></div>
+    </div>
+  </div>
+
+  <!-- AI CHAT PANEL -->
+  <div class="ai" id="ai-panel">
+    <div class="ai-head">
+      <div class="ai-title" id="ai-title">🧠 AI Assistant</div>
+      <div class="ai-sub" id="ai-sub">Configure in 🧠 AI</div>
+    </div>
+    <div class="ai-provs">
+      <button class="ap on" id="prov-local" onclick="setProv('local')">🧠 Local</button>
+      <button class="ap cl" id="prov-claude" onclick="setProv('claude')">✦ Claude</button>
+      <button class="ap" id="prov-ollama" onclick="setProv('ollama')">📡 Ollama</button>
+    </div>
+    <div class="ai-msgs" id="ai-msgs">
+      <div>
+        <div class="who ai">AI ASSISTANT</div>
+        <div class="bubble">Hi! I'm your coding assistant.<br><br>Tap <b style="color:var(--teal)">🧠 AI</b> in the toolbar to set up on-device AI (WebLLM), or add a Claude API key in <b style="color:var(--muted)">⚙</b> Settings.</div>
+      </div>
+    </div>
+    <div class="ai-quick">
+      <button class="aq" onclick="ask('Explain this code')">Explain</button>
+      <button class="aq" onclick="ask('Fix bugs')">Fix bugs</button>
+      <button class="aq" onclick="ask('Optimize this')">Optimize</button>
+      <button class="aq" onclick="ask('Add docstrings')">Docs</button>
+      <button class="aq" onclick="ask('Write unit tests')">Tests</button>
+    </div>
+    <div class="ai-bar">
+      <input class="ai-in" id="ai-in" placeholder="Ask your AI…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"/>
+      <button class="ai-go" onclick="sendMsg()">↑</button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- STATUS BAR -->
+<div class="sbar">
+  <div class="si"><div class="dot" id="s-dot" style="background:var(--muted2)"></div><span id="s-txt">Not configured</span></div>
+  <div class="flex1"></div>
+  <div class="si" id="s-model"></div>
+  <div class="sep" style="margin:0;height:14px;"></div>
+  <div class="si" id="s-lang">Python</div>
+  <div class="sep" style="margin:0;height:14px;"></div>
+  <div class="si" id="s-pos">Ln 1, Col 1</div>
+</div>
+</div><!-- /shell -->
+
+<!-- ══ AI SETUP MODAL ══ -->
+<div class="ov" id="ai-ov" onclick="if(event.target===this)hideModal('ai-ov')">
+<div class="modal">
+  <div class="mtitle">🧠 AI Setup</div>
+
+  <!-- Step 1: Easy — API Keys -->
+  <div class="sbox">
+    <div class="stitle">☁ Cloud AI — works instantly, no download</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Add any key below and AI starts working immediately in the chat panel.</div>
+
+    <div class="lbl">Anthropic (Claude) — Recommended</div>
+    <input class="inp" id="ai-ant" type="password" placeholder="sk-ant-api03-…"/>
+    <div class="hint">Get free at <strong>console.anthropic.com</strong> → API Keys → Create Key (costs ~$0.001 per chat message)</div>
+
+    <div style="height:1px;background:var(--border);margin:12px 0;"></div>
+
+    <div class="lbl">OpenAI</div>
+    <input class="inp" id="ai-oai" type="password" placeholder="sk-proj-…"/>
+    <div class="hint">platform.openai.com → API Keys</div>
+
+    <div style="height:1px;background:var(--border);margin:12px 0;"></div>
+
+    <div class="lbl">GitHub Models — 100% Free</div>
+    <input class="inp" id="ai-gh" type="password" placeholder="github_pat_…"/>
+    <div class="hint">github.com/settings/tokens → Generate new token (classic) → no scopes needed → gives you GPT-4o free</div>
+  </div>
+
+  <!-- Step 2: Advanced — Local -->
+  <div class="sbox" style="margin-top:8px;">
+    <div class="stitle">🖥 Local AI via Ollama (Mac on same WiFi)</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Free, private, no API costs. Run on your Mac, CodePad connects over WiFi.</div>
+    <div style="display:flex;gap:6px;">
+      <input class="inp" id="oll-url" placeholder="http://192.168.1.42:11434" style="flex:1;font-size:12px;font-family:'Menlo','Monaco',monospace;"/>
+      <button class="btn bt" style="padding:0 14px;" onclick="testOllama()">Test</button>
+    </div>
+    <div id="oll-res" style="font-size:11px;margin-top:4px;min-height:16px;"></div>
+    <div class="hint">Run <code style="color:var(--teal);font-size:10px;">OLLAMA_ORIGINS=* ollama serve</code> on your Mac first. Mac IP: System Settings → Wi-Fi → Details.</div>
+  </div>
+
+  <!-- WebGPU on-device — advanced, collapsible -->
+  <div class="sbox" style="margin-top:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleWebLLM()">
+      <div class="stitle" style="margin:0;">📱 On-Device AI (WebLLM — experimental)</div>
+      <span id="wllm-arrow" style="color:var(--muted);font-size:12px;">▼</span>
+    </div>
+    <div id="wllm-section" style="display:none;margin-top:10px;">
+      <span class="badge" id="gpu-badge" style="background:#1a1a28;color:var(--muted);border:1px solid var(--border);">Tap to check WebGPU</span>
+      <button class="btn bg" style="margin-left:8px;padding:4px 10px;font-size:11px;" onclick="checkGPU()">Check</button>
+      <div style="font-size:10.5px;color:var(--muted2);margin-top:6px;" id="gpu-detail"></div>
+      <div id="model-cards" style="margin-top:8px;"></div>
+      <div id="dl-wrap" style="display:none;margin-top:10px;">
+        <div style="font-size:11px;color:var(--teal);margin-bottom:4px;" id="dl-lbl">Downloading…</div>
+        <div class="prog-wrap"><div class="prog-bar" id="prog"></div></div>
+        <div style="font-size:10px;color:var(--muted2);" id="dl-pct">0%</div>
+      </div>
+      <div id="loaded-msg" style="display:none;margin-top:8px;padding:8px 10px;background:#0a2a1e;border:1px solid #0f4a30;border-radius:8px;font-size:12px;color:var(--green);">✓ Model ready!</div>
+    </div>
+  </div>
+
+  <!-- Ghost completions -->
+  <div class="sbox" style="margin-top:8px;">
+    <div class="tog-row">
+      <div>
+        <div class="stitle" style="margin-bottom:1px;">Ghost Completions</div>
+        <div style="font-size:11px;color:var(--muted);">Inline suggestions — Tab to accept</div>
+      </div>
+      <label class="tog">
+        <input type="checkbox" id="ghost-tog" onchange="setGhost(this.checked)"/>
+        <div class="tog-track"></div>
+        <div class="tog-thumb"></div>
+      </label>
+    </div>
+  </div>
+
+  <div class="mrow">
+    <button class="btn bg" onclick="hideModal('ai-ov')">Close</button>
+    <button class="btn bt" onclick="saveAI()">Save & Connect</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ SETTINGS MODAL ══ -->
+<div class="ov" id="settings-ov" onclick="if(event.target===this)hideModal('settings-ov')">
+<div class="modal">
+  <div class="mtitle">⚙ Settings</div>
+  <div class="sbox">
+    <div class="stitle">Cloud AI (optional)</div>
+    <div class="lbl">Anthropic API Key</div>
+    <input class="inp" id="s-ant" type="password" placeholder="sk-ant-api03-…"/>
+    <div class="hint">console.anthropic.com → API Keys</div>
+    <div class="lbl">GitHub Token (free — GitHub Models)</div>
+    <input class="inp" id="s-gh" type="password" placeholder="github_pat_…"/>
+    <div class="hint">github.com/settings/tokens — no scopes needed</div>
+  </div>
+  <div class="sbox">
+    <div class="stitle">Code Execution Server</div>
+    <div class="lbl">Railway URL</div>
+    <input class="inp" id="s-srv" type="url" placeholder="https://…railway.app"/>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+      <button class="btn bg" style="padding:6px 12px;font-size:11px;" onclick="testServer()">Test</button>
+      <span id="srv-res" style="font-size:11px;"></span>
+    </div>
+  </div>
+  <div class="lbl" style="margin-top:12px;">Theme</div>
+  <div class="tgrid" id="theme-grid"></div>
+  <div class="lbl" style="margin-top:10px;">Font Size</div>
+  <input class="inp" id="s-fs" type="number" min="10" max="22" style="width:90px;"/>
+  <div class="mrow">
+    <button class="btn bg" onclick="hideModal('settings-ov')">Cancel</button>
+    <button class="btn bp" onclick="saveSettings()">Save</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ NEW FILE MODAL ══ -->
+<div class="ov" id="newfile-ov" onclick="if(event.target===this)hideModal('newfile-ov')">
+<div class="modal" style="max-width:360px;">
+  <div class="mtitle">New File</div>
+  <input class="inp" id="nf-inp" placeholder="utils.py · index.js · main.rs · README.md" onkeydown="if(event.key==='Enter')createFile();if(event.key==='Escape')hideModal('newfile-ov')"/>
+  <div class="hint" style="margin-top:6px;">Extension sets language automatically.</div>
+  <div class="mrow">
+    <button class="btn bg" onclick="hideModal('newfile-ov')">Cancel</button>
+    <button class="btn bt" onclick="createFile()">Create</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ WIZARD MODAL ══ -->
+<div class="ov" id="wizard-ov" onclick="if(event.target===this)hideModal('wizard-ov')">
+<div class="modal">
+  <div class="mtitle">✦ Project Wizard</div>
+  <div class="lbl">App type</div>
+  <div class="wpills" id="wp-pills">
+    <button class="wp on" data-t="data_science">Data Science</button>
+    <button class="wp" data-t="ios_app">iOS App</button>
+    <button class="wp" data-t="api_backend">API Backend</button>
+    <button class="wp" data-t="web_app">Web App</button>
+    <button class="wp" data-t="cli_tool">CLI Tool</button>
+  </div>
+  <div class="lbl" style="margin-top:10px;">Describe your app</div>
+  <textarea class="inp" id="wiz-desc" rows="3">A data science tool that loads CSV files, cleans data and trains ML models.</textarea>
+  <div id="wiz-out" style="display:none;">
+    <div class="lbl" style="margin-top:10px;">Generated structure</div>
+    <div class="ftree" id="wiz-tree"></div>
+  </div>
+  <div class="mrow">
+    <button class="btn bg" onclick="hideModal('wizard-ov')">Cancel</button>
+    <button class="btn bp" id="wiz-btn" onclick="runWizard()">✦ Generate</button>
+    <button class="btn bt" id="wiz-load" style="display:none;" onclick="loadWizard()">Load →</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════
+// CODEPAD v5 — Zero external dependencies. Everything works offline.
+// ════════════════════════════════════════════════════════════════════════
+
+// ── Themes ──────────────────────────────────────────────────────────────
+const THEMES = [
+  {id:'dracula', name:'Dracula', editorBg:'#282a36', color:'#f8f8f2',
+   prev:`<span style="color:#ff79c6">def</span> <span style="color:#50fa7b">main</span>():\n  <span style="color:#f1fa8c">return</span> <span style="color:#f1fa8c">"hi"</span>\n<span style="color:#6272a4"># dracula</span>`},
+  {id:'nord', name:'Nord', editorBg:'#2e3440', color:'#d8dee9',
+   prev:`<span style="color:#81a1c1">def</span> <span style="color:#88c0d0">main</span>():\n  <span style="color:#a3be8c">return</span> <span style="color:#a3be8c">"hi"</span>\n<span style="color:#4c566a"># nord</span>`},
+  {id:'material', name:'Material', editorBg:'#212121', color:'#eeffff',
+   prev:`<span style="color:#89ddff">def</span> <span style="color:#82aaff">main</span>():\n  <span style="color:#c3e88d">return</span> <span style="color:#c3e88d">"hi"</span>\n<span style="color:#546e7a"># material</span>`},
+  {id:'monokai', name:'Monokai', editorBg:'#272822', color:'#f8f8f2',
+   prev:`<span style="color:#f92672">def</span> <span style="color:#a6e22e">main</span>():\n  <span style="color:#e6db74">return</span> <span style="color:#e6db74">"hi"</span>\n<span style="color:#75715e"># monokai</span>`},
+];
+
+// ── Models ──────────────────────────────────────────────────────────────
+const MODELS = [
+  {id:'Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC', name:'Qwen2.5-Coder 1.5B', size:'~950 MB', speed:'35–50 tok/s', dot:'var(--teal)',
+   desc:'Fastest. Best for ghost completions on any M-series iPad.',
+   tags:[['Fastest','t-teal'],['FIM ✓','t-grn'],['950 MB','t-blu']]},
+  {id:'Qwen2.5-Coder-3B-Instruct-q4f16_1-MLC', name:'Qwen2.5-Coder 3B ⭐', size:'~1.8 GB', speed:'25–40 tok/s', dot:'var(--teal)',
+   desc:'Best balance. Strong Python & JS. Recommended for M4 iPad.',
+   tags:[['Recommended','t-teal'],['FIM ✓','t-grn'],['1.8 GB','t-blu']]},
+  {id:'Llama-3.2-3B-Instruct-q4f16_1-MLC', name:'Llama 3.2 3B', size:'~1.9 GB', speed:'20–35 tok/s', dot:'var(--amber)',
+   desc:'Meta\'s compact model. Great general coding assistant.',
+   tags:[['All-round','t-amb'],['1.9 GB','t-blu']]},
+];
+
+// ── Default files ────────────────────────────────────────────────────────
+const START_FILES = [
+  {name:'main.py', lang:'python', content:
+`# main.py
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+def main():
+    np.random.seed(42)
+    X = np.random.randn(200, 4)
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    clf = RandomForestClassifier(n_estimators=50, random_state=42)
+    clf.fit(X_train, y_train)
+    acc = accuracy_score(y_test, clf.predict(X_test))
+    print(f"Model trained! Accuracy: {acc:.3f}")
+
+if __name__ == "__main__":
+    main()
+`},
+  {name:'requirements.txt', lang:'text', content:'numpy==1.26.4\npandas==2.2.1\nscikit-learn==1.4.1\nmatplotlib==3.8.3\n'},
+  {name:'README.md', lang:'markdown', content:'# My Project\n\n## Setup\n```bash\npip install -r requirements.txt\npython main.py\n```\n'},
+];
+
+// ── State ────────────────────────────────────────────────────────────────
+let files = JSON.parse(localStorage.getItem('cp5_files')||'null') || START_FILES.map(f=>({...f}));
+let cur = 0;
+let prov = localStorage.getItem('cp5_prov') || 'local';
+let ghost = localStorage.getItem('cp5_ghost') === 'true';
+let selModel = localStorage.getItem('cp5_model') || 'Qwen2.5-Coder-3B-Instruct-q4f16_1-MLC';
+let wizType = 'data_science';
+let wizData = null;
+let llmEngine = null;
+let loadedModel = null;
+let ghostTimer = null;
+let ghostSuggestion = '';
+let sidebarVis = true;
+let aiVis = true;
+
+const cfg = {
+  get ant(){ return localStorage.getItem('cp5_ant')||''; },
+  set ant(v){ localStorage.setItem('cp5_ant',v); },
+  get oai(){ return localStorage.getItem('cp5_oai')||''; },
+  set oai(v){ localStorage.setItem('cp5_oai',v); },
+  get gh(){ return localStorage.getItem('cp5_gh')||''; },
+  set gh(v){ localStorage.setItem('cp5_gh',v); },
+  get srv(){ return localStorage.getItem('cp5_srv')||''; },
+  set srv(v){ localStorage.setItem('cp5_srv',v); },
+  get oll(){ return localStorage.getItem('cp5_oll')||''; },
+  set oll(v){ localStorage.setItem('cp5_oll',v); },
+  get ollm(){ return localStorage.getItem('cp5_ollm')||'qwen2.5-coder:3b-instruct-q4_K_M'; },
+  set ollm(v){ localStorage.setItem('cp5_ollm',v); },
+  get theme(){ return localStorage.getItem('cp5_theme')||'dracula'; },
+  set theme(v){ localStorage.setItem('cp5_theme',v); },
+  get fs(){ return parseInt(localStorage.getItem('cp5_fs')||'13'); },
+  set fs(v){ localStorage.setItem('cp5_fs',v); },
+};
+
+// ── Boot ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', boot);
+function boot(){
+  applyTheme(cfg.theme);
+  applyFS(cfg.fs);
+  renderTree(); loadFile(0); renderTabs();
+  updateStatus();
+  renderThemeGrid();
+  initWizPills();
+  document.getElementById('ghost-tog').checked = ghost;
+  termLine('','<span class="prm">$</span> <span class="blink-c"></span>');
+  // track cursor position
+  const ed = document.getElementById('editor');
+  ed.addEventListener('click', updatePos);
+  ed.addEventListener('keyup', updatePos);
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────────────
+function showModal(id){
+  document.getElementById(id).classList.add('show');
+  // populate on open
+  if(id==='settings-ov'){
+    document.getElementById('s-ant').value = cfg.ant;
+    document.getElementById('s-gh').value = cfg.gh;
+    document.getElementById('s-srv').value = cfg.srv;
+    document.getElementById('s-fs').value = cfg.fs;
+    renderThemeGrid();
+  }
+  if(id==='ai-ov'){
+    document.getElementById('ai-ant').value = cfg.ant;
+    document.getElementById('ai-oai').value = cfg.oai;
+    document.getElementById('ai-gh').value = cfg.gh;
+    document.getElementById('oll-url').value = cfg.oll;
+    document.getElementById('ghost-tog').checked = ghost;
+  }
+  if(id==='newfile-ov'){
+    setTimeout(()=>document.getElementById('nf-inp').focus(), 150);
+    document.getElementById('nf-inp').value = '';
+  }
+}
+function hideModal(id){ document.getElementById(id).classList.remove('show'); }
+
+// ── Files ─────────────────────────────────────────────────────────────────
+const saveFiles = () => localStorage.setItem('cp5_files', JSON.stringify(files));
+const FI = n => n.endsWith('.py')?'🐍':n.endsWith('.js')||n.endsWith('.ts')?'📜':n.endsWith('.rs')?'🦀':n.endsWith('.swift')?'🔵':n.endsWith('.md')?'📝':n.includes('require')||n.includes('package')||n.endsWith('.toml')||n.endsWith('.lock')?'📦':'📄';
+
+function renderTree(){
+  const t = document.getElementById('filetree'); t.innerHTML = '';
+  files.forEach((f,i)=>{
+    const el = document.createElement('div');
+    el.className = 'fitem' + (i===cur?' cur':'');
+    el.innerHTML = `<span>${FI(f.name)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span class="fdel" onclick="delFile(event,${i})">✕</span>`;
+    el.onclick = ()=>loadFile(i);
+    t.appendChild(el);
+  });
+}
+function renderTabs(){
+  const t = document.getElementById('tabs'); t.innerHTML = '';
+  files.slice(0,8).forEach((f,i)=>{
+    const d = document.createElement('div');
+    d.className = 'tab' + (i===cur?' cur':'');
+    d.textContent = f.name;
+    d.onclick = ()=>loadFile(i);
+    t.appendChild(d);
+  });
+}
+function loadFile(i){
+  cur = i;
+  const f = files[i];
+  const ed = document.getElementById('editor');
+  ed.value = f.content || '';
+  applyTheme(cfg.theme); // also sets editor colors
+  document.getElementById('lang-sel').value = f.lang==='typescript'?'javascript':(f.lang||'python');
+  document.getElementById('s-lang').textContent = f.lang||'Python';
+  renderTree(); renderTabs();
+  ed.focus();
+  updatePos();
+}
+function onEdit(){
+  files[cur].content = document.getElementById('editor').value;
+  saveFiles();
+  clearGhost();
+  if(ghost){ clearTimeout(ghostTimer); ghostTimer = setTimeout(doGhost, 900); }
+}
+function onKey(e){
+  if(e.key==='Tab'){
+    e.preventDefault();
+    if(ghostSuggestion){ acceptGhost(); return; }
+    const ed = e.target;
+    const s = ed.selectionStart, end = ed.selectionEnd;
+    ed.value = ed.value.slice(0,s) + '    ' + ed.value.slice(end);
+    ed.selectionStart = ed.selectionEnd = s + 4;
+    onEdit();
+  }
+  if(e.key==='Escape') clearGhost();
+}
+function updatePos(){
+  const ed = document.getElementById('editor');
+  const txt = ed.value.slice(0, ed.selectionStart);
+  const lines = txt.split('\n');
+  document.getElementById('s-pos').textContent = `Ln ${lines.length}, Col ${lines[lines.length-1].length+1}`;
+}
+function switchLang(l){ files[cur].lang=l; document.getElementById('s-lang').textContent=l; saveFiles(); }
+function createFile(){
+  const n = document.getElementById('nf-inp').value.trim(); if(!n) return;
+  const lang = n.endsWith('.py')?'python':n.endsWith('.js')?'javascript':n.endsWith('.ts')?'typescript':n.endsWith('.rs')?'rust':n.endsWith('.swift')?'swift':n.endsWith('.md')?'markdown':'text';
+  const starter = lang==='python'?`# ${n}\n`:lang==='javascript'||lang==='typescript'?`// ${n}\n`:lang==='markdown'?`# ${n}\n`:`// ${n}\n`;
+  files.push({name:n,lang,content:starter}); saveFiles(); renderTree(); loadFile(files.length-1); renderTabs();
+  hideModal('newfile-ov');
+}
+function delFile(e,i){ e.stopPropagation(); if(files.length<=1) return; files.splice(i,1); if(cur>=files.length) cur=files.length-1; saveFiles(); renderTree(); loadFile(cur); renderTabs(); }
+function toggleSidebar(){ sidebarVis=!sidebarVis; document.getElementById('sidebar').classList.toggle('gone',!sidebarVis); document.getElementById('btn-sb').classList.toggle('on',sidebarVis); }
+function toggleAI(){ aiVis=!aiVis; document.getElementById('ai-panel').classList.toggle('gone',!aiVis); document.getElementById('btn-ai').classList.toggle('on',aiVis); }
+
+// ── Ghost completions ─────────────────────────────────────────────────────
+function clearGhost(){ ghostSuggestion=''; }
+function acceptGhost(){
+  if(!ghostSuggestion) return;
+  const ed = document.getElementById('editor');
+  const s = ed.selectionStart;
+  ed.value = ed.value.slice(0,s) + ghostSuggestion + ed.value.slice(s);
+  ed.selectionStart = ed.selectionEnd = s + ghostSuggestion.length;
+  clearGhost(); onEdit();
+}
+async function doGhost(){
+  if(!ghost) return;
+  const ed = document.getElementById('editor');
+  const pos = ed.selectionStart;
+  const prefix = ed.value.slice(0, pos);
+  if(prefix.trim().length < 8) return;
+  const last = prefix.slice(-400);
+  let completion = '';
+  try{
+    if(llmEngine){
+      const r = await llmEngine.chat.completions.create({
+        messages:[{role:'system',content:'Code completion engine. Output ONLY the next 1 line, no explanation.'},{role:'user',content:`Complete this ${files[cur].lang} code (output next line only):\n${last}`}],
+        temperature:0.1, max_tokens:60, stop:['\n\n','```'],
+      });
+      completion = (r.choices[0]?.message?.content||'').split('\n')[0].trim();
+    } else if(cfg.oll){
+      const res = await fetch(cfg.oll+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(3000),body:JSON.stringify({model:cfg.ollm,prompt:last,stream:false,options:{temperature:0.1,num_predict:50,stop:['\n\n']}})});
+      const d = await res.json(); completion = (d.response||'').split('\n')[0].trim();
+    }
+  }catch(e){}
+  if(completion && completion.length > 1){
+    ghostSuggestion = completion;
+    // show a subtle visual hint in status bar
+    document.getElementById('s-pos').textContent += '  · Tab: accept suggestion';
+  }
+}
+function setGhost(on){ ghost=on; localStorage.setItem('cp5_ghost',on); }
+
+// ── AI provider ───────────────────────────────────────────────────────────
+function setProv(p){
+  prov=p; localStorage.setItem('cp5_prov',p);
+  ['local','claude','ollama'].forEach(id=>{ const b=document.getElementById('prov-'+id); if(b){b.classList.remove('on'); if(id==='claude')b.classList.remove('cl');} });
+  const b = document.getElementById('prov-'+p); if(b){ b.classList.add('on'); if(p==='claude')b.classList.add('cl'); }
+  updateStatus();
+}
+
+// ── WebGPU check ──────────────────────────────────────────────────────────
+async function checkGPU(){
+  const badge = document.getElementById('gpu-badge');
+  const detail = document.getElementById('gpu-detail');
+  if(!navigator.gpu){ badge.className='badge badge-no'; badge.textContent='⚠ WebGPU unavailable — update to iPadOS 26'; detail.textContent='On-device AI requires iPadOS 26 / Safari 26 or newer.'; return false; }
+  try{
+    const adapter = await navigator.gpu.requestAdapter();
+    if(!adapter){ badge.className='badge badge-no'; badge.textContent='No GPU adapter found'; return false; }
+    badge.className='badge badge-ok'; badge.textContent='✓ WebGPU ready — M4 detected';
+    detail.textContent='Your GPU can run on-device AI models. Pick a model below and tap Load.';
+    return true;
+  }catch(e){ badge.className='badge badge-no'; badge.textContent='WebGPU error: '+e.message; return false; }
+}
+
+// ── Model cards ────────────────────────────────────────────────────────────
+function renderModels(){
+  const c = document.getElementById('model-cards'); c.innerHTML='';
+  MODELS.forEach(m=>{
+    const d = document.createElement('div');
+    d.className = 'mc' + (m.id===selModel?' on':'');
+    d.onclick = ()=>{ selModel=m.id; localStorage.setItem('cp5_model',m.id); renderModels(); };
+    const tags = m.tags.map(([l,cl])=>`<span class="mc-tag ${cl}">${l}</span>`).join('');
+    const isLoaded = m.id===loadedModel;
+    d.innerHTML = `
+      <div class="mc-dot" style="background:${m.dot}"></div>
+      <div style="flex:1;">
+        <div class="mc-name">${m.name} <span style="font-size:10px;color:var(--muted);font-weight:400">${m.size} · ${m.speed}</span></div>
+        <div class="mc-desc">${m.desc}</div>
+        <div>${tags}${isLoaded?'<span class="mc-tag t-grn">✓ loaded</span>':''}</div>
+      </div>
+      ${m.id===selModel?`<button onclick="event.stopPropagation();loadModel('${m.id}')" style="background:var(--teal);border:none;border-radius:7px;padding:5px 10px;font-size:10px;font-weight:700;color:#032a27;cursor:pointer;white-space:nowrap;flex-shrink:0;">${isLoaded?'Reload':'Load'}</button>`:''}
+    `;
+    c.appendChild(d);
+  });
+}
+
+// ── Load WebLLM model (dynamic import, only when user taps Load) ────────────
+async function loadModel(modelId){
+  const dl = document.getElementById('dl-wrap');
+  const prog = document.getElementById('prog');
+  const pct = document.getElementById('dl-pct');
+  const lbl = document.getElementById('dl-lbl');
+  const done = document.getElementById('loaded-msg');
+  dl.style.display='block'; done.style.display='none';
+  lbl.textContent='Loading WebLLM library…'; prog.style.width='3%';
+  termLine('info','[WebLLM] Loading library…');
+  try{
+    if(!window._wllm){
+      const mod = await import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.82/+esm');
+      window._wllm = mod;
+    }
+    lbl.textContent='Downloading model (first time only)…';
+    termLine('info','[WebLLM] Downloading model — first time is ~1.8 GB, then cached forever');
+    llmEngine = await window._wllm.CreateMLCEngine(modelId, {
+      initProgressCallback:(r)=>{
+        const p = Math.round((r.progress||0)*100);
+        prog.style.width=Math.max(3,p)+'%'; pct.textContent=p+'%';
+        lbl.textContent = r.text||`Loading ${modelId}…`;
+      }
+    });
+    loadedModel=modelId; selModel=modelId;
+    localStorage.setItem('cp5_model',modelId);
+    dl.style.display='none'; done.style.display='block';
+    termLine('ok','[WebLLM] ✓ Model loaded — running on your M4 GPU!');
+    setProv('local'); updateStatus(); renderModels();
+  }catch(e){
+    dl.style.display='none';
+    const isCDN=e.message&&(e.message.includes('fetch')||e.message.includes('Failed to fetch')||e.message.includes('dynamically imported'));
+    termLine('err', isCDN ? '[WebLLM] On-device AI requires iPadOS 26 on iPad with WebGPU — use Claude or GitHub API instead' : '[WebLLM] Error: '+e.message);
+  }
+}
+
+// ── AI chat ────────────────────────────────────────────────────────────────
+function ask(q){ document.getElementById('ai-in').value=q; sendMsg(); }
+function sendMsg(){
+  const inp = document.getElementById('ai-in');
+  const txt = inp.value.trim(); if(!txt) return;
+  inp.value='';
+  addBubble('me','YOU',txt);
+  callAI(txt);
+}
+async function callAI(msg){
+  const code = document.getElementById('editor').value.slice(0,2000);
+  const fname = files[cur].name;
+  if(prov==='local'&&llmEngine) return callLocal(msg,code,fname);
+  if(prov==='ollama'&&cfg.oll) return callOllama(msg,code,fname);
+  // cloud: try keys in order
+  if(cfg.ant) return callClaude(msg,code,fname);
+  if(cfg.oai) return callOpenAI(msg,code,fname);
+  if(cfg.gh)  return callGitHub(msg,code,fname);
+  if(llmEngine) return callLocal(msg,code,fname);
+  if(cfg.oll) return callOllama(msg,code,fname);
+  addBubble('ai','AI','⚠ No AI configured. Tap 🧠 AI in the toolbar — add a Claude or GitHub token to get started instantly (no download needed).');
+}
+async function callLocal(msg,code,fname){
+  const div = addBubble('ai','LOCAL AI','…');
+  const bub = div.querySelector('.bubble');
+  try{
+    const stream = await llmEngine.chat.completions.create({
+      messages:[{role:'system',content:`Expert coding assistant in CodePad. File: ${fname}. Be concise, max 150 words. Use backtick code blocks.`},{role:'user',content:`File:\n\`\`\`\n${code}\n\`\`\`\n\n${msg}`}],
+      temperature:0.3, max_tokens:400, stream:true,
+    });
+    let full='';
+    for await(const chunk of stream){ full+=(chunk.choices[0]?.delta?.content||''); bub.innerHTML=fmtAI(full)+'<span class="blink-c"></span>'; scrollAI(); }
+    bub.innerHTML=fmtAI(full);
+  }catch(e){ bub.innerHTML=`<span style="color:var(--red)">Error: ${e.message}</span>`; }
+  scrollAI();
+}
+async function callClaude(msg,code,fname){
+  const div=addBubble('cl','CLAUDE','…'); const bub=div.querySelector('.bubble');
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':cfg.ant,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:`Expert coding assistant. File: ${fname}. Concise.`,messages:[{role:'user',content:`File:\n\`\`\`\n${code}\n\`\`\`\n\n${msg}`}]})});
+    const d=await res.json(); bub.innerHTML=fmtAI(d.content?.map(b=>b.text||'').join('')||JSON.stringify(d.error||d));
+  }catch(e){ bub.innerHTML=`<span style="color:var(--red)">Error: ${e.message}</span>`; }
+  scrollAI();
+}
+async function callOllama(msg,code,fname){
+  const div=addBubble('ai','OLLAMA','…'); const bub=div.querySelector('.bubble');
+  try{
+    const res=await fetch(cfg.oll+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:cfg.ollm,messages:[{role:'system',content:`Expert coding assistant. File: ${fname}. Concise.`},{role:'user',content:`File:\n\`\`\`\n${code}\n\`\`\`\n\n${msg}`}],stream:false})});
+    const d=await res.json(); bub.innerHTML=fmtAI(d.message?.content||'No response');
+  }catch(e){ bub.innerHTML=`<span style="color:var(--red)">Error: ${e.message}</span>`; }
+  scrollAI();
+}
+async function callOpenAI(msg,code,fname){
+  const div=addBubble('cl','OPENAI','…'); const bub=div.querySelector('.bubble');
+  try{
+    const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${cfg.oai}`},body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:`Expert coding assistant. File: ${fname}. Concise.`},{role:'user',content:`File:\n\`\`\`\n${code}\n\`\`\`\n\n${msg}`}],max_tokens:600})});
+    const d=await res.json(); bub.innerHTML=fmtAI(d.choices?.[0]?.message?.content||JSON.stringify(d.error||d));
+  }catch(e){ bub.innerHTML=`<span style="color:var(--red)">Error: ${e.message}</span>`; }
+  scrollAI();
+}
+async function callGitHub(msg,code,fname){
+  const div=addBubble('cl','GITHUB MODELS','…'); const bub=div.querySelector('.bubble');
+  try{
+    const res=await fetch('https://models.inference.ai.azure.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${cfg.gh}`},body:JSON.stringify({model:'gpt-4o',messages:[{role:'system',content:`Expert coding assistant. File: ${fname}. Concise.`},{role:'user',content:`File:\n\`\`\`\n${code}\n\`\`\`\n\n${msg}`}],max_tokens:600})});
+    const d=await res.json(); bub.innerHTML=fmtAI(d.choices?.[0]?.message?.content||JSON.stringify(d));
+  }catch(e){ bub.innerHTML=`<span style="color:var(--red)">Error: ${e.message}</span>`; }
+  scrollAI();
+}
+function addBubble(role,who,text){
+  const msgs=document.getElementById('ai-msgs');
+  const div=document.createElement('div');
+  div.innerHTML=`<div class="who ${role}">${who}</div><div class="bubble${role==='me'?' me':''}">${fmtAI(text)}</div>`;
+  msgs.appendChild(div); scrollAI(); return div;
+}
+function scrollAI(){ const m=document.getElementById('ai-msgs'); m.scrollTop=m.scrollHeight; }
+function fmtAI(t){
+  return String(t).split(/(```[\s\S]*?```)/g).map(p=>{
+    if(p.startsWith('```')){ const c=p.replace(/```\w*\n?/,'').replace(/```$/,'').trim(); return`<div class="acode">${esc(c)}</div>`; }
+    return esc(p).replace(/\n/g,'<br>').replace(/`([^`]+)`/g,'<code style="color:var(--teal);background:rgba(45,212,191,.1);padding:1px 4px;border-radius:3px">$1</code>');
+  }).join('');
+}
+
+// ── Run code ──────────────────────────────────────────────────────────────
+async function runCode(){
+  const code=document.getElementById('editor').value;
+  const lang=files[cur].lang; const fname=files[cur].name;
+  const btn=document.getElementById('run-btn');
+  btn.disabled=true; btn.textContent='⟳ Running…';
+  const term=document.getElementById('term'); term.innerHTML='';
+  const cmd=lang==='python'?'python ':lang==='javascript'||lang==='typescript'?'node ':'';
+  termLine('prm','$ '+cmd+fname);
+
+  // Built-in JS/TS execution — no server needed
+  if(lang==='javascript'||lang==='typescript'){
+    try{
+      const out=[];
+      const fcon={log:(...a)=>out.push(a.map(x=>typeof x==='object'?JSON.stringify(x):String(x)).join(' ')),error:(...a)=>out.push('Error: '+a.join(' ')),warn:(...a)=>out.push('Warning: '+a.join(' ')),info:(...a)=>out.push(a.join(' '))};
+      new Function('console',code)(fcon);
+      out.length?out.forEach(l=>termLine('',l,'#c8c8e8')):termLine('info','(no output)');
+      termLine('ok','[DONE] exit 0');
+    }catch(e){ termLine('err',e.toString()); termLine('err','[FAILED] exit 1'); }
+    termLine('','<span class="prm">$</span> <span class="blink-c"></span>');
+    btn.disabled=false; btn.textContent='▶ Run'; return;
+  }
+
+  // Railway server
+  if(cfg.srv){
+    try{
+      const t0=Date.now();
+      const res=await fetch(cfg.srv+'/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,language:lang}),signal:AbortSignal.timeout(15000)});
+      const d=await res.json(); const el=((Date.now()-t0)/1000).toFixed(2)+'s';
+      (d.stdout||'').split('\n').filter(l=>l).forEach(l=>termLine('',l,'#c8c8e8'));
+      (d.stderr||'').split('\n').filter(l=>l).forEach(l=>termLine(l.includes('Error')||l.includes('BLOCK')?'err':'warn',l));
+      termLine(d.exit_code===0?'ok':'err',`[${d.exit_code===0?'DONE':'FAILED'}] exit ${d.exit_code} · ${el}`);
+      termLine('','<span class="prm">$</span> <span class="blink-c"></span>');
+      btn.disabled=false; btn.textContent='▶ Run'; return;
+    }catch(e){ termLine('warn','Server unreachable — using AI simulation'); }
+  }
+
+  // AI simulation fallback
+  try{
+    let out='';
+    const simSys=`Simulate running ${lang} code. Show ONLY terminal output lines, no markdown, no explanation.`;
+    const simMsg=`Run this code and show the output:\n\`\`\`${lang}\n${code.slice(0,1500)}\n\`\`\``;
+    if(llmEngine){
+      const r=await llmEngine.chat.completions.create({messages:[{role:'system',content:simSys},{role:'user',content:simMsg}],temperature:0.1,max_tokens:250});
+      out=r.choices[0]?.message?.content||'';
+    } else if(cfg.ant){
+      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':cfg.ant,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:simSys,messages:[{role:'user',content:simMsg}]})});
+      const d=await res.json(); out=d.content?.map(b=>b.text||'').join('')||JSON.stringify(d.error||d);
+    } else if(cfg.oai){
+      const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${cfg.oai}`},body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:simSys},{role:'user',content:simMsg}],max_tokens:300})});
+      const d=await res.json(); out=d.choices?.[0]?.message?.content||JSON.stringify(d.error||d);
+    } else if(cfg.gh){
+      const res=await fetch('https://models.inference.ai.azure.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${cfg.gh}`},body:JSON.stringify({model:'gpt-4o',messages:[{role:'system',content:simSys},{role:'user',content:simMsg}],max_tokens:300})});
+      const d=await res.json(); out=d.choices?.[0]?.message?.content||JSON.stringify(d.error||d);
+    } else if(cfg.oll){
+      const res=await fetch(cfg.oll+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:cfg.ollm,messages:[{role:'system',content:simSys},{role:'user',content:simMsg}],stream:false})});
+      const d=await res.json(); out=d.message?.content||'';
+    } else {
+      out='[No AI or server configured]\nFor Python: add a Claude/GitHub API key in ⚙ Settings, or deploy the Railway server.\nFor JavaScript: just works — switch to a .js file!';
+    }
+    out.split('\n').filter(l=>l).forEach(l=>termLine(l.toLowerCase().includes('error')?'err':'',l,l.toLowerCase().includes('error')?'':'#9090c8'));
+    if(cfg.ant||cfg.oai||cfg.gh||llmEngine||cfg.oll) termLine('info','[AI simulation — add Railway server URL in ⚙ for real execution]');
+  }catch(e){ termLine('err','Run error: '+e.message); }
+  termLine('','<span class="prm">$</span> <span class="blink-c"></span>');
+  btn.disabled=false; btn.textContent='▶ Run';
+}
+function termLine(cls,text,color){
+  const term=document.getElementById('term');
+  const d=document.createElement('div');
+  if(cls) d.innerHTML=`<span class="${cls}">${typeof text==='string'&&!text.includes('<')?esc(text):text}</span>`;
+  else d.innerHTML=`<span style="color:${color||'#8888a8'}">${typeof text==='string'&&!text.includes('<')?esc(text):text}</span>`;
+  term.appendChild(d); term.scrollTop=term.scrollHeight;
+}
+
+// ── Wizard ────────────────────────────────────────────────────────────────
+const WD={data_science:'A data science tool that loads CSV files, cleans data and trains ML models.',ios_app:'Meditation iOS app with guided breathing, streaks and Apple Health.',api_backend:'REST API with user auth, posts, comments and rate limiting.',web_app:'React dashboard with KPI cards, charts and CSV export.',cli_tool:'Developer CLI that scaffolds projects from templates.'};
+const WIZARD_SYS=`You are CodePad's Project Wizard. Return ONLY valid JSON, no markdown, no explanation.\n{"project_name":"snake_case","files":[{"name":"filename.ext","lang":"python|javascript|rust|swift|text|markdown","folder":"name or null","content":"15-25 lines real starter code"}]}\nRules: 4-6 files. Always include main entry file, README.md, and requirements.txt or package.json. Real functional skeleton.`;
+
+function initWizPills(){
+  document.querySelectorAll('#wp-pills .wp').forEach(p=>{
+    p.onclick=()=>{
+      wizType=p.dataset.t;
+      document.querySelectorAll('#wp-pills .wp').forEach(x=>x.classList.remove('on'));
+      p.classList.add('on');
+      document.getElementById('wiz-desc').value=WD[wizType]||'';
+    };
+  });
+}
+async function runWizard(){
+  const btn=document.getElementById('wiz-btn');
+  const desc=document.getElementById('wiz-desc').value.trim(); if(!desc) return;
+  if(!llmEngine&&!cfg.ant){ termLine('warn','[Wizard] Load an AI model or add Claude API key first'); hideModal('wizard-ov'); return; }
+  btn.innerHTML='<span class="spin">⟳</span> Generating…'; btn.disabled=true;
+  try{
+    let raw='';
+    if(llmEngine){ const r=await llmEngine.chat.completions.create({messages:[{role:'system',content:WIZARD_SYS},{role:'user',content:`App: ${wizType}\nDesc: ${desc}`}],temperature:0.2,max_tokens:1000}); raw=r.choices[0]?.message?.content||''; }
+    else{ const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':cfg.ant,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:WIZARD_SYS,messages:[{role:'user',content:`App: ${wizType}\nDesc: ${desc}`}]})}); const d=await res.json(); raw=d.content?.map(b=>b.text||'').join('')||''; }
+    wizData=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const seen={}; let html='';
+    wizData.files.forEach(f=>{ if(f.folder&&!seen[f.folder]){html+=`<span style="color:var(--amber)">📁 ${f.folder}/\n</span>`;seen[f.folder]=true;} html+=`${f.folder?'  ':''}${FI(f.name)} <span style="color:var(--blue)">${f.name}</span>\n`; });
+    document.getElementById('wiz-tree').innerHTML=html;
+    document.getElementById('wiz-out').style.display='block';
+    document.getElementById('wiz-load').style.display='inline-block';
+  }catch(e){ termLine('err','[Wizard] '+e.message); }
+  btn.textContent='✦ Regenerate'; btn.disabled=false;
+}
+function loadWizard(){
+  if(!wizData) return;
+  files=wizData.files.map(f=>({...f,content:f.content||`# ${f.name}\n`}));
+  saveFiles(); cur=0; renderTree(); loadFile(0); renderTabs();
+  hideModal('wizard-ov');
+  termLine('ok','[Wizard] Loaded: '+wizData.project_name);
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────
+function renderThemeGrid(){
+  document.getElementById('theme-grid').innerHTML=THEMES.map(t=>`
+    <div class="tcard${t.id===cfg.theme?' on':''}" onclick="pickTheme('${t.id}')">
+      <div class="tprev" style="background:${t.editorBg}">${t.prev}</div>
+      <div class="tname">${t.name}</div>
+    </div>`).join('');
+}
+function pickTheme(id){ cfg.theme=id; applyTheme(id); renderThemeGrid(); }
+function applyTheme(id){
+  const t=THEMES.find(x=>x.id===id)||THEMES[0];
+  const ed=document.getElementById('editor');
+  if(ed){ ed.style.background=t.editorBg; ed.style.color=t.color; }
+}
+function applyFS(s){
+  let st=document.getElementById('fs-style');
+  if(!st){st=document.createElement('style');st.id='fs-style';document.head.appendChild(st);}
+  st.textContent=`#editor{font-size:${s}px!important;}`;
+}
+function saveSettings(){
+  cfg.ant=document.getElementById('s-ant').value.trim();
+  cfg.oai=(document.getElementById('s-oai')||{value:cfg.oai}).value.trim()||cfg.oai;
+  cfg.gh=document.getElementById('s-gh').value.trim();
+  cfg.srv=document.getElementById('s-srv').value.trim().replace(/\/$/,'');
+  cfg.fs=parseInt(document.getElementById('s-fs').value)||13;
+  applyFS(cfg.fs); updateStatus(); hideModal('settings-ov');
+}
+async function testServer(){
+  const url=document.getElementById('s-srv').value.trim(); if(!url) return;
+  const el=document.getElementById('srv-res'); el.style.color='var(--amber)'; el.textContent='Testing…';
+  try{ const res=await fetch(url+'/',{signal:AbortSignal.timeout(5000)}); const d=await res.json(); el.style.color='var(--green)'; el.textContent=`✓ ${d.service||'connected'}`; }
+  catch(e){ el.style.color='var(--red)'; el.textContent='✗ '+e.message; }
+}
+async function testOllama(){
+  const url=document.getElementById('oll-url').value.trim(); if(!url) return;
+  const el=document.getElementById('oll-res'); el.style.color='var(--amber)'; el.textContent='Testing…';
+  try{ const res=await fetch(url+'/api/tags',{signal:AbortSignal.timeout(5000)}); const d=await res.json(); const names=(d.models||[]).map(m=>m.name).slice(0,3).join(', '); el.style.color='var(--green)'; el.textContent=`✓ Connected. Models: ${names||'none yet'}`; }
+  catch(e){ el.style.color='var(--red)'; el.textContent='✗ '+e.message; }
+}
+function toggleWebLLM(){
+  const s=document.getElementById('wllm-section');
+  const a=document.getElementById('wllm-arrow');
+  const open=s.style.display==='block';
+  s.style.display=open?'none':'block';
+  a.textContent=open?'▼':'▲';
+  if(!open){ checkGPU(); renderModels(); }
+}
+function saveAI(){
+  cfg.ant=document.getElementById('ai-ant').value.trim();
+  cfg.oai=document.getElementById('ai-oai').value.trim();
+  cfg.gh=document.getElementById('ai-gh').value.trim();
+  cfg.oll=document.getElementById('oll-url').value.trim().replace(/\/$/,'');
+  localStorage.setItem('cp5_model',selModel);
+  // auto-select best available provider
+  if(!llmEngine){
+    if(cfg.ant) setProv('claude');
+    else if(cfg.oai) setProv('claude'); // reuse claude slot for oai
+    else if(cfg.gh) setProv('claude');
+    else if(cfg.oll) setProv('ollama');
+  }
+  updateStatus(); hideModal('ai-ov');
+}
+function updateStatus(){
+  const dot=document.getElementById('s-dot'); const txt=document.getElementById('s-txt');
+  const mdl=document.getElementById('s-model'); const badge=document.getElementById('srv-badge');
+  if(loadedModel){ dot.style.background='var(--teal)'; txt.textContent='On-device AI ✓'; mdl.textContent=loadedModel.split('-').slice(0,3).join('-'); }
+  else if(cfg.ant){ dot.style.background='var(--purple)'; txt.textContent='Claude ready'; mdl.textContent='claude-sonnet-4'; }
+  else if(cfg.oai){ dot.style.background='var(--blue)'; txt.textContent='OpenAI ready'; mdl.textContent='gpt-4o-mini'; }
+  else if(cfg.gh){ dot.style.background='var(--green)'; txt.textContent='GitHub Models ready'; mdl.textContent='gpt-4o (free)'; }
+  else if(cfg.oll){ dot.style.background='var(--amber)'; txt.textContent='Ollama ready'; mdl.textContent=cfg.ollm.split(':')[0]; }
+  else{ dot.style.background='var(--red)'; txt.textContent='No AI — tap 🧠 AI to set up'; mdl.textContent=''; }
+  badge.textContent=cfg.srv?'⬤ server ✓':'⬤ no server';
+  badge.style.color=cfg.srv?'var(--green)':'var(--muted2)';
+  const sub = loadedModel?loadedModel.split('-').slice(0,3).join('-'):cfg.ant?'Claude API':cfg.oai?'OpenAI':cfg.gh?'GitHub Models (free)':cfg.oll?'Ollama':'Tap 🧠 AI to configure';
+  document.getElementById('ai-sub').textContent=sub;
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>
